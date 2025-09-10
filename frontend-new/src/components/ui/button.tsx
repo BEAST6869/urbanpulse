@@ -17,6 +17,9 @@ const buttonVariants = cva(
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
         gradient: "bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 shadow-lg hover:shadow-xl",
+        glass: "backdrop-blur-xl bg-white/30 border border-white/50 text-slate-700 shadow-glass hover:bg-white/40 hover:shadow-glass-lg dark:bg-white/8 dark:border-white/12 dark:text-white dark:hover:bg-white/12",
+        "glass-primary": "backdrop-blur-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-blue-500/30 shadow-glow hover:shadow-glow-lg",
+        "glass-secondary": "backdrop-blur-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white border-purple-500/30 shadow-glow hover:shadow-glow-lg",
       },
       size: {
         default: "h-10 px-4 py-2",
