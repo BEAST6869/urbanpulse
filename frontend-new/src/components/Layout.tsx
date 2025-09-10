@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { GlassNav } from '@/components/ui/glass-nav'
 import { cn } from '@/lib/utils'
 import { useTheme } from './ThemeProvider'
+import Footer from './Footer'
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const { theme, setTheme } = useTheme()
@@ -115,18 +116,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </div>
       </main>
 
-      {/* Glass Footer */}
-      <footer className="relative z-10 mt-20">
-        <div className="backdrop-blur-xl bg-white/20 dark:bg-white/6 border-t border-white/30 dark:border-white/8">
-          <div className="container mx-auto px-6 py-8 text-center">
-            <p className="text-slate-600 dark:text-white/70 text-sm">
-              Built with{' '}
-              <span className="text-gradient-purple font-semibold">❤️</span>
-              {' '}for the city
-            </p>
-          </div>
-        </div>
-      </footer>
+      {/* Professional Footer */}
+      <Footer />
     </div>
   )
 }
