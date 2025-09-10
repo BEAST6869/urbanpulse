@@ -142,3 +142,52 @@ reportSchema.methods.updateStatus = function(newStatus, assignedTo = null) {
 };
 
 module.exports = mongoose.model('Report', reportSchema);
+import mongoose from "mongoose";
+
+const reportSchema = new mongoose.Schema(
+  {
+    description: {
+      type: String,
+      required: true,
+    },
+    imageUrl: {
+      type: String,
+      required: true,
+    },
+    location: {
+      type: {
+        type: String,
+        enum: ["Point"],
+        default: "Point",
+        required: true,
+      },
+      coordinates: {
+        type: [Number], // [longitude, latitude]
+        required: true,
+      },
+    },
+    category: {
+      type: String,
+      enum: ["pothole", "garbage", "streetlight", "other"],
+      default: "other",
+    },
+    confidence: {
+      type: Number,
+      default: 0,
+    },
+    status: {
+      type: String,
+      enum: ["Reported", "Assigned", "Resolved"],
+      default: "Reported",
+    },
+  },
+  { timestamps: true }
+);
+
+// Add geospatial index for location queries
+reportSchema.index({ location: "2dsphere" });
+
+const Report = mongoose.model("Report", reportSchema);
+
+export default Report;
+
