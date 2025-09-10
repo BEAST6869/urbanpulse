@@ -1,0 +1,36 @@
+{
+  "aiCategories": [
+    "pothole",
+    "garbage", 
+    "streetlight",
+    "road_damage",
+    "vandalism",
+    "construction",
+    "water_leak",
+    "traffic_sign",
+    "sidewalk_damage",
+    "other"
+  ],
+  "backendCategories": [
+    "infrastructure",
+    "environment", 
+    "safety",
+    "transportation",
+    "public_services",
+    "other"
+  ],
+  "categoryMapping": {
+    "pothole": "infrastructure",
+    "garbage": "environment",
+    "streetlight": "infrastructure", 
+    "road_damage": "infrastructure",
+    "vandalism": "safety",
+    "construction": "transportation",
+    "water_leak": "infrastructure",
+    "traffic_sign": "transportation",
+    "sidewalk_damage": "infrastructure",
+    "other": "other"
+  },
+  "confidenceThreshold": 0.45,
+  "defaultCategory": "other"
+}

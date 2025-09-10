@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import CameraUploader from "@/components/CameraUploader";
-import { classifyImage } from "@/components/Classifier";
+import { classifyImage, getModelInfo, isClassificationAvailable } from "@/components/Classifier";
 
 export default function ReportPage() {
   const [imageFile, setImageFile] = useState(null);
@@ -10,11 +10,15 @@ export default function ReportPage() {
   const [location, setLocation] = useState(null);
   const [category, setCategory] = useState("");
   const [confidence, setConfidence] = useState(null);
+  const [classificationResult, setClassificationResult] = useState(null);
+  const [aiAvailable, setAiAvailable] = useState(false);
+  const [modelInfo, setModelInfo] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [successId, setSuccessId] = useState(null);
 
   useEffect(() => {
+    // Get geolocation
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
@@ -27,13 +31,38 @@ export default function ReportPage() {
         { enableHighAccuracy: true, timeout: 10000 }
       );
     }
+    
+    // Check AI availability
+    const checkAI = async () => {
+      const available = await isClassificationAvailable();
+      setAiAvailable(available);
+      
+      if (available) {
+        const info = await getModelInfo();
+        setModelInfo(info);
+      }
+    };
+    
+    checkAI();
   }, []);
 
   const handleClassify = async () => {
     if (!imageFile) return;
-    const result = await classifyImage(imageFile);
-    setCategory(result.category);
-    setConfidence(result.confidence);
+    
+    setError("");
+    
+    try {
+      const result = await classifyImage(imageFile);
+      setClassificationResult(result);
+      setCategory(result.backendCategory || result.category);
+      setConfidence(result.confidence);
+      
+      if (result.error) {
+        setError(`Classification warning: ${result.error}`);
+      }
+    } catch (error) {
+      setError(`Classification failed: ${error.message}`);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -45,22 +74,37 @@ export default function ReportPage() {
       if (!imageFile) throw new Error("Please add a photo of the issue.");
 
       // Ensure we ran classification
-      if (!category) {
+      if (!category && aiAvailable) {
         const result = await classifyImage(imageFile);
-        setCategory(result.category);
+        setClassificationResult(result);
+        setCategory(result.backendCategory || result.category);
         setConfidence(result.confidence);
       }
 
       const formData = new FormData();
+      formData.append("title", `Urban Issue Report - ${category || 'Other'}`);
       formData.append("description", description);
-      formData.append("category", category);
+      formData.append("category", category || 'other');
+      formData.append("priority", 'medium');
+      
       if (location) {
-        formData.append("latitude", String(location.latitude));
-        formData.append("longitude", String(location.longitude));
+        formData.append("location", JSON.stringify({
+          type: 'Point',
+          coordinates: [location.longitude, location.latitude]
+        }));
+        formData.append("address", `Location: ${location.latitude.toFixed(5)}, ${location.longitude.toFixed(5)}`);
       }
-      formData.append("image", imageFile);
+      
+      formData.append("reporter", JSON.stringify({
+        name: 'Anonymous User',
+        email: 'user@urbanpulse.app',
+        phone: ''
+      }));
+      
+      formData.append("images", imageFile);
 
-      const res = await fetch("http://localhost:5000/api/reports", {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+      const res = await fetch(`${API_URL}/api/reports`, {
         method: "POST",
         body: formData,
       });
@@ -100,21 +144,85 @@ export default function ReportPage() {
           />
         </div>
 
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={handleClassify}
-            disabled={!imageFile}
-            className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 text-white px-4 py-2 rounded-lg"
-          >
-            Classify Image
-          </button>
-          {category && (
-            <span className="text-sm text-gray-700">
-              Category: <strong>{category}</strong>{" "}
-              {confidence && <em>({Math.round(confidence * 100)}% confidence)</em>}
-            </span>
+        <div className="space-y-3">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={handleClassify}
+              disabled={!imageFile || !aiAvailable}
+              className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 text-white px-4 py-2 rounded-lg"
+            >
+              {aiAvailable ? 'Classify Image' : 'AI Unavailable'}
+            </button>
+            
+            {!aiAvailable && (
+              <span className="text-sm text-amber-600">
+                ⚠️ AI classification is currently unavailable
+              </span>
+            )}
+          </div>
+          
+          {classificationResult && (
+            <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">AI Classification:</span>
+                <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm font-medium">
+                  {classificationResult.category}
+                </span>
+                <span className="text-sm text-gray-600">
+                  ({Math.round(classificationResult.confidence * 100)}% confidence)
+                </span>
+              </div>
+              
+              {classificationResult.backendCategory !== classificationResult.category && (
+                <div className="text-sm text-gray-600">
+                  Mapped to: <strong>{classificationResult.backendCategory}</strong>
+                </div>
+              )}
+              
+              {classificationResult.confidence < (classificationResult.threshold || 0.7) && (
+                <div className="text-sm text-amber-600">
+                  ⚠️ Low confidence - please verify the category
+                </div>
+              )}
+              
+              {classificationResult.allPredictions && classificationResult.allPredictions.length > 1 && (
+                <div className="text-xs text-gray-500">
+                  <details>
+                    <summary className="cursor-pointer hover:text-gray-700">View all predictions</summary>
+                    <div className="mt-2 space-y-1">
+                      {classificationResult.allPredictions.slice(0, 3).map((pred, idx) => (
+                        <div key={idx} className="flex justify-between">
+                          <span>{pred.category}</span>
+                          <span>{Math.round(pred.confidence * 100)}%</span>
+                        </div>
+                      ))}
+                    </div>
+                  </details>
+                </div>
+              )}
+            </div>
           )}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-2">Category (Manual Override)</label>
+          <select
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            className="w-full border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">Select category...</option>
+            <option value="infrastructure">Infrastructure</option>
+            <option value="environment">Environment</option>
+            <option value="safety">Safety</option>
+            <option value="transportation">Transportation</option>
+            <option value="public_services">Public Services</option>
+            <option value="other">Other</option>
+          </select>
+          <p className="text-xs text-gray-500 mt-1">
+            Leave blank to use AI classification, or select manually to override
+          </p>
         </div>
 
         <div>

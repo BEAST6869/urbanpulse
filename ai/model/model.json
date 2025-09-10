@@ -1,0 +1,197 @@
+{
+  "format": "layers-model",
+  "generatedBy": "TensorFlow.js tfjs-layers v4.4.0",
+  "convertedBy": "TensorFlow.js Converter v4.4.0",
+  "modelTopology": {
+    "keras_version": "2.11.0",
+    "backend": "tensorflow",
+    "model_config": {
+      "class_name": "Sequential",
+      "config": {
+        "name": "urban_classifier",
+        "layers": [
+          {
+            "class_name": "InputLayer",
+            "config": {
+              "batch_input_shape": [
+                null,
+                224,
+                224,
+                3
+              ],
+              "dtype": "float32",
+              "sparse": false,
+              "ragged": false,
+              "name": "input_1"
+            }
+          },
+          {
+            "class_name": "Conv2D",
+            "config": {
+              "name": "conv2d_1",
+              "trainable": true,
+              "filters": 32,
+              "kernel_size": [
+                3,
+                3
+              ],
+              "strides": [
+                1,
+                1
+              ],
+              "padding": "valid",
+              "activation": "relu",
+              "use_bias": true
+            }
+          },
+          {
+            "class_name": "MaxPooling2D",
+            "config": {
+              "name": "max_pooling2d_1",
+              "pool_size": [
+                2,
+                2
+              ],
+              "strides": [
+                2,
+                2
+              ]
+            }
+          },
+          {
+            "class_name": "Conv2D",
+            "config": {
+              "name": "conv2d_2",
+              "trainable": true,
+              "filters": 64,
+              "kernel_size": [
+                3,
+                3
+              ],
+              "strides": [
+                1,
+                1
+              ],
+              "padding": "valid",
+              "activation": "relu",
+              "use_bias": true
+            }
+          },
+          {
+            "class_name": "MaxPooling2D",
+            "config": {
+              "name": "max_pooling2d_2",
+              "pool_size": [
+                2,
+                2
+              ],
+              "strides": [
+                2,
+                2
+              ]
+            }
+          },
+          {
+            "class_name": "GlobalAveragePooling2D",
+            "config": {
+              "name": "global_average_pooling2d_1"
+            }
+          },
+          {
+            "class_name": "Dense",
+            "config": {
+              "name": "dense_1",
+              "trainable": true,
+              "units": 128,
+              "activation": "relu",
+              "use_bias": true
+            }
+          },
+          {
+            "class_name": "Dense",
+            "config": {
+              "name": "predictions",
+              "trainable": true,
+              "units": 10,
+              "activation": "softmax",
+              "use_bias": true
+            }
+          }
+        ]
+      }
+    }
+  },
+  "weightsManifest": [
+    {
+      "paths": [
+        "model.bin"
+      ],
+      "weights": [
+        {
+          "name": "conv2d_1/kernel",
+          "shape": [
+            3,
+            3,
+            3,
+            32
+          ],
+          "dtype": "float32"
+        },
+        {
+          "name": "conv2d_1/bias",
+          "shape": [
+            32
+          ],
+          "dtype": "float32"
+        },
+        {
+          "name": "conv2d_2/kernel",
+          "shape": [
+            3,
+            3,
+            32,
+            64
+          ],
+          "dtype": "float32"
+        },
+        {
+          "name": "conv2d_2/bias",
+          "shape": [
+            64
+          ],
+          "dtype": "float32"
+        },
+        {
+          "name": "dense_1/kernel",
+          "shape": [
+            64,
+            128
+          ],
+          "dtype": "float32"
+        },
+        {
+          "name": "dense_1/bias",
+          "shape": [
+            128
+          ],
+          "dtype": "float32"
+        },
+        {
+          "name": "predictions/kernel",
+          "shape": [
+            128,
+            10
+          ],
+          "dtype": "float32"
+        },
+        {
+          "name": "predictions/bias",
+          "shape": [
+            10
+          ],
+          "dtype": "float32"
+        }
+      ]
+    }
+  ]
+}

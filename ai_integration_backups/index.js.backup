@@ -11,7 +11,6 @@ const connectDB = require('./config/database');
 const reportRoutes = require('./routes/reports');
 const statsRoutes = require('./routes/stats');
 const authRoutes = require('./routes/auth');
-const classifyRoutes = require('./routes/classify');
 
 // Import middleware
 const { apiLimiter, authLimiter } = require('./middleware/rateLimiter');
@@ -53,55 +52,24 @@ app.get('/', (req, res) => {
       auth: '/api/auth',
       reports: '/api/reports',
       stats: '/api/stats',
-      classify: '/api/classify',
       health: '/api/health'
     }
   });
 });
 
-app.get('/api/health', async (req, res) => {
-  try {
-    // Check AI model status
-    const { getModelInfo } = require('./controllers/classificationController');
-    const modelStatus = await new Promise((resolve) => {
-      const mockReq = {};
-      const mockRes = {
-        json: (data) => resolve(data.data || { status: 'error' })
-      };
-      getModelInfo(mockReq, mockRes).catch(() => resolve({ status: 'error' }));
-    });
-
-    res.json({
-      status: 'healthy',
-      timestamp: new Date().toISOString(),
-      database: 'connected',
-      uptime: process.uptime(),
-      aiModel: {
-        status: modelStatus.status || 'unknown',
-        categories: modelStatus.totalCategories || 0,
-        available: modelStatus.status === 'loaded'
-      }
-    });
-  } catch (error) {
-    res.json({
-      status: 'healthy',
-      timestamp: new Date().toISOString(),
-      database: 'connected',
-      uptime: process.uptime(),
-      aiModel: {
-        status: 'error',
-        categories: 0,
-        available: false
-      }
-    });
-  }
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    database: 'connected',
+    uptime: process.uptime()
+  });
 });
 
 // API Routes
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/stats', statsRoutes);
-app.use('/api/classify', classifyRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
