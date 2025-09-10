@@ -9,11 +9,14 @@ import {
   AlertCircle, 
   CheckCircle2,
   X,
-  Loader2
+  Loader2,
+  Cpu,
+  Globe
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, PageHeader } from '@/components/ui/primitives'
 import { generateReportId } from '@/lib/utils'
+import tfLoader, { type ClassificationResult } from '@/lib/tfLoader'
 
 interface LocationData {
   latitude: number
@@ -45,10 +48,14 @@ export function ReportPage() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
   const [reportId, setReportId] = useState('')
+  const [classificationResult, setClassificationResult] = useState<ClassificationResult | null>(null)
+  const [tfInitialized, setTfInitialized] = useState(false)
+  const [tfInitializing, setTfInitializing] = useState(false)
   
   const navigate = useNavigate()
 
   useEffect(() => {
+    // Initialize geolocation
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
@@ -61,6 +68,27 @@ export function ReportPage() {
         { enableHighAccuracy: true, timeout: 10000 }
       )
     }
+
+    // Initialize TensorFlow.js
+    const initTensorFlow = async () => {
+      setTfInitializing(true)
+      try {
+        const success = await tfLoader.initialize()
+        setTfInitialized(success)
+        
+        if (success) {
+          console.log('🎉 TensorFlow.js initialized for local inference')
+        } else {
+          console.log('⚠️ TensorFlow.js initialization failed, will use API fallback')
+        }
+      } catch (error) {
+        console.error('❌ TensorFlow.js initialization error:', error)
+      } finally {
+        setTfInitializing(false)
+      }
+    }
+
+    initTensorFlow()
   }, [])
 
   const handleImageUpload = (file: File) => {
@@ -104,17 +132,37 @@ export function ReportPage() {
   const classifyImage = async () => {
     if (!imageFile) return
     setIsClassifying(true)
+    setError('')
     
-    // Simulate AI classification
-    setTimeout(() => {
-      const randomCategory = categories[Math.floor(Math.random() * categories.length)]
-      const randomConfidence = Math.random() * 0.3 + 0.7
+    try {
+      console.log('🧠 Starting image classification...')
       
-      setCategory(randomCategory)
-      setConfidence(randomConfidence)
-      setIsClassifying(false)
+      // Use TensorFlow.js classification
+      const result = await tfLoader.classifyImage(imageFile)
+      
+      setClassificationResult(result)
+      setCategory(result.category)
+      setConfidence(result.confidence)
+      
+      console.log(`✅ Classification complete: ${result.category} (${result.confidence.toFixed(4)} confidence)`)
+      console.log(`🕰️ Processing time: ${result.processingTime}ms`)
+      console.log(`📍 Source: ${result.source}`)
+      
       setStep(3)
-    }, 2000)
+      
+    } catch (error) {
+      console.error('❌ Classification error:', error)
+      setError(`Classification failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      
+      // Fallback to manual category selection
+      const randomCategory = categories[Math.floor(Math.random() * categories.length)]
+      setCategory(randomCategory)
+      setConfidence(0.5)
+      setStep(3)
+      
+    } finally {
+      setIsClassifying(false)
+    }
   }
 
   const handleSubmit = async () => {
@@ -145,6 +193,8 @@ export function ReportPage() {
     setImagePreview(null)
     setCategory('')
     setConfidence(null)
+    setClassificationResult(null)
+    setError('')
     setStep(1)
   }
 
@@ -244,15 +294,44 @@ export function ReportPage() {
                 </div>
                 <div>
                   <h2 className="text-xl font-semibold mb-2">AI Classification</h2>
-                  <p className="text-muted-foreground">
+                  <p className="text-muted-foreground mb-4">
                     Let our AI identify the type of issue for better categorization
                   </p>
+                  
+                  {/* TensorFlow.js Status */}
+                  <div className="flex items-center justify-center gap-2 mb-4">
+                    {tfInitializing ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+                        <span className="text-sm text-muted-foreground">Initializing TensorFlow.js...</span>
+                      </>
+                    ) : tfInitialized ? (
+                      <>
+                        <Cpu className="h-4 w-4 text-green-500" />
+                        <span className="text-sm text-green-600 dark:text-green-400">Local AI Ready</span>
+                      </>
+                    ) : (
+                      <>
+                        <Globe className="h-4 w-4 text-orange-500" />
+                        <span className="text-sm text-orange-600 dark:text-orange-400">API Fallback</span>
+                      </>
+                    )}
+                  </div>
                 </div>
+                
+                {error && (
+                  <div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+                    <AlertCircle className="h-4 w-4 text-destructive" />
+                    <span className="text-sm text-destructive">{error}</span>
+                  </div>
+                )}
+                
                 <Button 
                   onClick={classifyImage}
                   loading={isClassifying}
                   size="lg"
                   variant="gradient"
+                  disabled={!imageFile}
                 >
                   {isClassifying ? 'Analyzing Image...' : 'Classify Issue'}
                 </Button>
@@ -275,13 +354,31 @@ export function ReportPage() {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium mb-2">Category</label>
-                  <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-                    <CheckCircle2 className="h-5 w-5 text-green-600" />
-                    <span className="font-medium">{category}</span>
-                    {confidence && (
-                      <span className="text-sm text-muted-foreground">
-                        ({Math.round(confidence * 100)}% confidence)
-                      </span>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                      <CheckCircle2 className="h-5 w-5 text-green-600" />
+                      <span className="font-medium">{category}</span>
+                      {confidence && (
+                        <span className="text-sm text-muted-foreground">
+                          ({Math.round(confidence * 100)}% confidence)
+                        </span>
+                      )}
+                    </div>
+                    
+                    {classificationResult && (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        {classificationResult.source === 'local' ? (
+                          <>
+                            <Cpu className="h-3 w-3" />
+                            <span>Processed locally with TensorFlow.js ({classificationResult.processingTime}ms)</span>
+                          </>
+                        ) : (
+                          <>
+                            <Globe className="h-3 w-3" />
+                            <span>Processed via API ({classificationResult.processingTime}ms)</span>
+                          </>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>

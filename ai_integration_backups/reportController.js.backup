@@ -1,40 +1,5 @@
 const Report = require('../models/Report');
 const { deleteImage } = require('../config/cloudinary');
-const aiService = require('../services/aiClassificationService');
-
-// Initialize AI service
-const initializeAI = async () => {
-  try {
-    await aiService.initialize();
-    console.log('📋 Enhanced AI classification enabled for reports');
-  } catch (error) {
-    console.log('⚠️ AI classification unavailable:', error.message);
-  }
-};
-
-// Initialize AI service on module load
-initializeAI();
-
-// Auto-classify image using enhanced AI service
-const classifyImageBuffer = async (imageBuffer) => {
-  try {
-    const result = await aiService.classifyImage(imageBuffer);
-    
-    return {
-      aiCategory: result.category, // The specific AI category (e.g., 'pothole')
-      backendCategory: result.backendCategory, // The backend category (e.g., 'infrastructure')
-      confidence: result.confidence,
-      isHighConfidence: result.confidence >= result.threshold,
-      allPredictions: result.allPredictions,
-      features: result.features,
-      source: result.source,
-      processingTime: result.processingTime
-    };
-  } catch (error) {
-    console.error('Enhanced AI classification error:', error);
-    return null;
-  }
-};
 
 // Create a new report
 const createReport = async (req, res) => {
@@ -64,54 +29,22 @@ const createReport = async (req, res) => {
       parsedReporter = reporter;
     }
 
-    // Process uploaded images and perform AI classification
+    // Process uploaded images
     const images = req.files ? req.files.map(file => ({
       url: file.path,
       publicId: file.filename
     })) : [];
 
-    // Auto-classify the first image if available
-    let aiClassification = null;
-    let finalCategory = category; // Use provided category by default
-    
-    if (req.files && req.files.length > 0 && req.files[0].buffer) {
-      aiClassification = await classifyImageBuffer(req.files[0].buffer);
-      
-      // If no category provided and AI classification is confident, use AI category
-      if (!category && aiClassification && aiClassification.isHighConfidence) {
-        finalCategory = aiClassification.backendCategory;
-      }
-    }
-
     const reportData = {
       title,
       description,
-      category: finalCategory,
+      category,
       priority,
       location: parsedLocation,
       address,
       reporter: parsedReporter,
       images,
-      userId: req.user ? req.user.id : null, // Link to user if authenticated
-      // Add enhanced AI classification metadata
-      aiMetadata: aiClassification ? {
-        // Basic classification results
-        aiCategory: aiClassification.aiCategory,
-        backendCategory: aiClassification.backendCategory,
-        confidence: aiClassification.confidence,
-        autoClassified: !category && aiClassification.isHighConfidence,
-        threshold: aiClassification.threshold || 0.45,
-        
-        // Enhanced data
-        source: aiClassification.source,
-        processingTime: aiClassification.processingTime,
-        allPredictions: aiClassification.allPredictions || [],
-        features: aiClassification.features || {},
-        
-        // Metadata
-        classifiedAt: new Date(),
-        modelVersion: 'v2.0.0-tensorflow-enhanced'
-      } : null
+      userId: req.user ? req.user.id : null // Link to user if authenticated
     };
 
     const report = new Report(reportData);

@@ -96,60 +96,7 @@ const reportSchema = new mongoose.Schema({
       type: Date,
       default: Date.now
     }
-  }],
-  aiMetadata: {
-    // Basic classification results
-    aiCategory: String, // Specific AI category (e.g., 'pothole')
-    backendCategory: String, // Backend category (e.g., 'infrastructure')
-    confidence: Number,
-    autoClassified: Boolean,
-    threshold: Number,
-    
-    // Enhanced data from improved AI service
-    source: String, // Classification method used (e.g., 'tensorflow_tensors')
-    processingTime: Number, // Time taken to classify in ms
-    
-    // All prediction alternatives
-    allPredictions: [{
-      category: String,
-      confidence: Number,
-      backendCategory: String
-    }],
-    
-    // Extracted image features
-    features: {
-      brightness: Number,
-      variance: Number,
-      contrast: Number,
-      textureComplexity: Number,
-      gradientMagnitude: Number,
-      darkPixelRatio: Number,
-      colorUniformity: Number,
-      grayscaleTendency: Number,
-      surfaceType: String,
-      complexity: Number,
-      colorDistribution: {
-        red: Number,
-        green: Number,
-        blue: Number,
-        redVariance: Number,
-        greenVariance: Number,
-        blueVariance: Number,
-        dominantColor: String,
-        colorBalance: Number
-      }
-    },
-    
-    // Metadata
-    classifiedAt: {
-      type: Date,
-      default: Date.now
-    },
-    modelVersion: {
-      type: String,
-      default: 'v2.0.0-tensorflow'
-    }
-  }
+  }]
 }, {
   timestamps: true
 });
@@ -161,14 +108,6 @@ reportSchema.index({ location: '2dsphere' });
 reportSchema.index({ status: 1, createdAt: -1 });
 reportSchema.index({ category: 1, status: 1 });
 reportSchema.index({ priority: 1, status: 1 });
-
-// AI-enhanced indexes for classification queries
-reportSchema.index({ 'aiMetadata.aiCategory': 1 });
-reportSchema.index({ 'aiMetadata.confidence': -1 });
-reportSchema.index({ 'aiMetadata.aiCategory': 1, 'aiMetadata.confidence': -1 });
-reportSchema.index({ 'aiMetadata.features.surfaceType': 1 });
-reportSchema.index({ 'aiMetadata.autoClassified': 1 });
-reportSchema.index({ 'aiMetadata.source': 1 });
 
 // Virtual for getting coordinates as [lat, lng] format
 reportSchema.virtual('coordinates').get(function() {
@@ -203,4 +142,52 @@ reportSchema.methods.updateStatus = function(newStatus, assignedTo = null) {
 };
 
 module.exports = mongoose.model('Report', reportSchema);
+import mongoose from "mongoose";
+
+const reportSchema = new mongoose.Schema(
+  {
+    description: {
+      type: String,
+      required: true,
+    },
+    imageUrl: {
+      type: String,
+      required: true,
+    },
+    location: {
+      type: {
+        type: String,
+        enum: ["Point"],
+        default: "Point",
+        required: true,
+      },
+      coordinates: {
+        type: [Number], // [longitude, latitude]
+        required: true,
+      },
+    },
+    category: {
+      type: String,
+      enum: ["pothole", "garbage", "streetlight", "other"],
+      default: "other",
+    },
+    confidence: {
+      type: Number,
+      default: 0,
+    },
+    status: {
+      type: String,
+      enum: ["Reported", "Assigned", "Resolved"],
+      default: "Reported",
+    },
+  },
+  { timestamps: true }
+);
+
+// Add geospatial index for location queries
+reportSchema.index({ location: "2dsphere" });
+
+const Report = mongoose.model("Report", reportSchema);
+
+export default Report;
 
