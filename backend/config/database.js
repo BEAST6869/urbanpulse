@@ -3,9 +3,9 @@ const mongoose = require('mongoose');
 const connectDB = async () => {
   try {
     // Check if MongoDB URI is configured
-    if (!process.env.MONGODB_URI || process.env.MONGODB_URI.includes('username:password')) {
-      console.warn('⚠️  MongoDB URI not configured. Please update .env file with your MongoDB Atlas connection string.');
-      console.warn('   Server will start but database operations will fail until configured.');
+    if (!process.env.MONGODB_URI || process.env.MONGODB_URI.trim() === '' || process.env.MONGODB_URI.includes('username:password')) {
+      console.log('🔧 Development Mode: Running without MongoDB connection');
+      console.log('   💡 To enable database features, configure MONGODB_URI in .env file');
       return;
     }
 

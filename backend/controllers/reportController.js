@@ -14,9 +14,16 @@ const createReport = async (req, res) => {
       parsedLocation = location;
     }
 
-    // Parse reporter if it's a string
+    // Use authenticated user info if available, otherwise use reporter from request
     let parsedReporter;
-    if (typeof reporter === 'string') {
+    if (req.user) {
+      // Use authenticated user's information
+      parsedReporter = {
+        name: req.user.name,
+        email: req.user.email,
+        phone: req.user.phone || ''
+      };
+    } else if (typeof reporter === 'string') {
       parsedReporter = JSON.parse(reporter);
     } else {
       parsedReporter = reporter;
@@ -36,7 +43,8 @@ const createReport = async (req, res) => {
       location: parsedLocation,
       address,
       reporter: parsedReporter,
-      images
+      images,
+      userId: req.user ? req.user.id : null // Link to user if authenticated
     };
 
     const report = new Report(reportData);

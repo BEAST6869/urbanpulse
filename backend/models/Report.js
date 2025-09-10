@@ -76,9 +76,15 @@ const reportSchema = new mongoose.Schema({
       trim: true
     }
   },
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    sparse: true // Allow null values
+  },
   assignedTo: {
-    type: String,
-    trim: true
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    sparse: true
   },
   resolvedAt: {
     type: Date
